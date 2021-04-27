@@ -4,7 +4,10 @@
 //
 // This file describes the Server (receiver) class
 //
+#ifndef SERVER
+#define SERVER
 
+#include "../include/shared.h"
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -12,9 +15,6 @@
 #include <stdexcept>
 #include <boost/array.hpp>
 #include <boost/asio.hpp>
-
-#define TCP_PORT 1234
-#define UDP_PORT 1235
 
 using boost::asio::ip::tcp;
 using boost::asio::ip::udp;
@@ -44,7 +44,9 @@ public:
 
     void tcp_accept()
     {
-
+        std::cout << "Accepting TCP connections... ";
+        acceptor.accept(tcp_socket);
+        std::cout << "connected!" << std::endl;
     }
 
     void udp_accept()
@@ -53,9 +55,20 @@ public:
     }
 
     // the receive functions may need different return types
-    void receive_metadata(std::fstream& file)
+    void receive_metadata(/*std::fstream& file*/)
     {
-
+        boost::asio::streambuf receive_buffer;
+        boost::system::error_code error;
+        boost::asio::read(tcp_socket, receive_buffer, boost::asio::transfer_all(), error);
+        if (error && error != boost::asio::error::eof)
+        {
+            std::cout << "Receive failed: " << error.message() << std::endl;
+        }
+        else
+        {
+            const char *data = boost::asio::buffer_cast<const char *>(receive_buffer.data());
+            std::cout << data << std::endl;
+        }
     }
 
     void receive_packet(std::fstream& file)
@@ -65,6 +78,8 @@ public:
 
     void write_file(std::fstream& file)
     {
-        
+
     }
 };
+
+#endif

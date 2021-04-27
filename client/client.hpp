@@ -61,7 +61,32 @@ public:
 
     }
 
-    
+    void tcp_send(std::string)
+    {
+
+    }
+
+    // actually packets will be sent using TCP, so this might be obsolete
+    void tcp_send(std::vector<char>& packet)
+    {
+
+    }
+
+    void udp_send(std::vector<char>& packet)
+    {
+
+    }
+
+    // return types/parameters may change
+    void tcp_read(std::vector<char>& msg)
+    {
+
+    }
+
+    void udp_read(std::vector<char> &msg)
+    {
+
+    }
 };
     
     

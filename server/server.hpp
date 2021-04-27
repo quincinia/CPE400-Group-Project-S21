@@ -67,7 +67,7 @@ public:
         else
         {
             const char *data = boost::asio::buffer_cast<const char *>(receive_buffer.data());
-            std::cout << data << std::endl;
+            std::cout << "Received: " << data << std::endl;
         }
     }
 

@@ -9,8 +9,10 @@
 
 #include <cstdint>
 
-#define TCP_PORT 1234
-#define UDP_PORT 1235
+#define TCP_PORT    1234
+#define UDP_PORT    1235
+
+#define PACKET_SIZE 1024
 
 union translate_sequence_num
 {

@@ -51,7 +51,8 @@ public:
 
     void udp_accept()
     {
-
+        // the UDP socket is already set up and we don't need
+        // to accept connections so this function is unneeded?
     }
 
     // the receive functions may need different return types
@@ -62,7 +63,7 @@ public:
         boost::asio::read(tcp_socket, receive_buffer, boost::asio::transfer_all(), error);
         if (error && error != boost::asio::error::eof)
         {
-            std::cout << "Receive failed: " << error.message() << std::endl;
+            std::cerr << "Receive failed: " << error.message() << std::endl;
         }
         else
         {
@@ -71,9 +72,27 @@ public:
         }
     }
 
-    void receive_packet(std::fstream& file)
+    bool receive_packet(std::fstream& file)
     {
+        std::vector<char> buffer(PACKET_SIZE);
+        boost::system::error_code error;
+        std::cout << "Waiting for UDP data... " << std::endl;
 
+        // read() returns the number of bytes read, aka the length of the vector/array
+        std::size_t len = boost::asio::read(udp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
+        if (error && error != boost::asio::error::eof)
+        {
+            std::cerr << "Receive failed: " << error.message() << std::endl;
+            return false;
+        }
+        
+        std::cout << "Receive success!" << std::endl;
+        std::cout << "Size of packet: " << len << std::endl;
+        std::cout << "Received data: ";
+        for (int i = 4; i < len; i++)
+            std::cout << buffer[i];
+        std::cout << std::endl;
+        return true;
     }
 
     void write_file(std::fstream& file)

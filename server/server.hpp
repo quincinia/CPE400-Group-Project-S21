@@ -33,6 +33,12 @@ private:
     udp::socket udp_socket;
     udp::endpoint remote_endpoint;
 
+    // keep track of sequence numbers
+    std::uint32_t sequence_num = 0;
+
+    // flag to indicate that we should not be expecting more packets
+    bool final_packet_received = false;
+
 public:
     Server() :
         tcp_socket(io_context),
@@ -72,27 +78,106 @@ public:
         }
     }
 
-    bool receive_packet(std::fstream& file)
+    bool verify_sequence_num(std::vector<char>& packet)
+    {
+        // check if the packet has the sequence number we are expecting
+        // if the packet is the last packet, then it will be accepted
+        sequence_num_translator translator{sequence_num};
+        return (translator.translate[0] == packet[0]  &&
+                translator.translate[1] == packet[1]  &&
+                translator.translate[2] == packet[2]  &&
+                translator.translate[3] == packet[3]) 
+                ||
+               (packet[0] == (char) 0xFF &&
+                packet[1] == (char) 0xFF &&
+                packet[2] == (char) 0xFF &&
+                packet[3] == (char) 0xFF);
+    }
+
+    bool receive_packet(std::vector<char>& packet)
     {
         std::vector<char> buffer(PACKET_SIZE);
         boost::system::error_code error;
-        std::cout << "Waiting for UDP data... " << std::endl;
+        std::cout << "Waiting for UDP data... ";
 
         // read() returns the number of bytes read, aka the length of the vector/array
-        std::size_t len = boost::asio::read(udp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
+        std::size_t len = udp_socket.receive(boost::asio::buffer(buffer));
         if (error && error != boost::asio::error::eof)
         {
             std::cerr << "Receive failed: " << error.message() << std::endl;
             return false;
         }
+
+        if (verify_sequence_num(buffer))
+        {
+            // if the packet is the last one, we should not accept any more
+            if (packet[0] == (char)0xFF &&
+                packet[1] == (char)0xFF &&
+                packet[2] == (char)0xFF &&
+                packet[3] == (char)0xFF)
+            {
+                final_packet_received = true;
+            }
+            else
+            {
+                // otherwise, we will update our expected sequence
+                sequence_num++;
+            }
+        }
+        else
+        {
+            // if the packet is out of order, we won't accept it
+            return false;
+        }
         
-        std::cout << "Receive success!" << std::endl;
+        std::cout << "success!" << std::endl;
         std::cout << "Size of packet: " << len << std::endl;
         std::cout << "Received data: ";
         for (int i = 4; i < len; i++)
             std::cout << buffer[i];
         std::cout << std::endl;
+
+        // save data into packet
+        buffer.resize(len);
+        packet = buffer;
+
         return true;
+    }
+
+    // creates an acknowledgement message based
+    // off the current expected sequence number
+    // Packet format: <4-character sequence number> + <space> + <human-readable message (optional)>
+    std::string generate_ack()
+    {
+        sequence_num_translator translator{sequence_num};
+        if (final_packet_received)
+        {
+            return std::string() + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + " Final packet was received!";
+        }
+        else 
+        {
+            return std::string() + translator.translate[0] + translator.translate[1] + translator.translate[2] + translator.translate[3] + " Expecting next packet to have sequence: " + std::to_string(sequence_num);
+        }
+    }
+    // synchronous send
+    // messages will be generated outside of this function
+    // see above for message format
+    bool tcp_send(std::string message)
+    {
+        std::cout << "Sending response: " << message << std::endl;
+
+        boost::system::error_code error;
+        boost::asio::write(tcp_socket, boost::asio::buffer(message), error);
+        if (!error)
+        {
+            std::cout << "Success!" << std::endl;
+            return true;
+        }
+        else
+        {
+            std::cerr << "Failed: " << error.message() << std::endl;
+            return false;
+        }
     }
 
     void write_file(std::fstream& file)

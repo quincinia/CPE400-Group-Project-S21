@@ -14,7 +14,7 @@
 
 #define PACKET_SIZE 1024
 
-union translate_sequence_num
+union sequence_num_translator
 {
     std::uint32_t sequence_num;
     char translate[4];

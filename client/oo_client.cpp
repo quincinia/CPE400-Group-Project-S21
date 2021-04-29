@@ -22,14 +22,27 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        // connect to server
+        // connect to TCP server
         client.tcp_connect(argv[1]);
+
+        // connect to UDP server
+        client.udp_connect(argv[1]);
 
         // create metadata
         std::string metadata = client.generate_metadata(file, argv[2]);
 
         // send metadata
         client.tcp_send(metadata);
+
+        // open file for packet generation
+        file.open(argv[2]);
+        
+        // vector to hold the packet
+        std::vector<char> packet;
+        client.generate_packet(file, packet);
+
+        // send packet over UDP
+        client.udp_send(packet);
 
     }
     catch(const std::exception& e)

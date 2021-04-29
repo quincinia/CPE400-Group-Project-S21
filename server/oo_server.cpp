@@ -21,6 +21,12 @@ int main(int argc, char* argv[])
 
         // receive metadata from client
         server.receive_metadata();
+
+        // buffer for receiving data packets
+        std::vector<char> packet;
+
+        // TEST: receive UDP message
+        server.receive_packet(packet);
         
     }
     catch(const std::exception& e)

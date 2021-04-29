@@ -108,7 +108,7 @@ public:
         }
 
         // input sequence numbers
-        translate_sequence_num translator{sequence_num++};
+        sequence_num_translator translator{sequence_num++};
         if (file.eof())
         {
             // maxed out sequence number
@@ -158,15 +158,43 @@ public:
 
     }
 
-    void udp_send(std::vector<char>& packet)
+    bool udp_send(std::vector<char>& packet)
     {
-
+        std::cout << "Sending packet... ";
+        boost::system::error_code error;
+        // boost::asio::write(udp_socket, boost::asio::buffer(packet), error);
+        udp_socket.send(boost::asio::buffer(packet));
+        if (!error)
+        {
+            std::cout << "success!" << std::endl;
+            return true;
+        }
+        else
+        {
+            std::cerr << "failed: " << error.message() << std::endl;
+            return false;
+        }
     }
 
     // return types/parameters may change
-    void tcp_read(std::vector<char>& msg)
+    bool tcp_read(std::vector<char>& msg)
     {
-
+        std::vector<char> buffer(PACKET_SIZE);
+        boost::system::error_code error;
+        std::cout << "Waiting for server message... ";
+        std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
+        if (error && error != boost::asio::error::eof)
+        {
+            std::cerr << "Receive failed: " << error.message() << std::endl;
+            return false;
+        }
+        else
+        {
+            std::cout << "received!" << std::endl;
+            buffer.resize(len);
+            msg = buffer;
+            return true;
+        }
     }
 
     void udp_read(std::vector<char> &msg)

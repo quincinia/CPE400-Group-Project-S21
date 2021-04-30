@@ -54,6 +54,8 @@ int main(int argc, char* argv[])
             while (!client.confirm_ack(ack))
                 client.udp_send(packet);
         }
+
+        file.close();
     }
     catch(const std::exception& e)
     {

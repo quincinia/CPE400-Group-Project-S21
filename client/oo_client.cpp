@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
         client.tcp_send(metadata);
 
         // open file for packet generation
-        file.open(argv[2]);
+        file.open(argv[2], std::ios_base::in | std::ios_base::binary);
         
         // packet generation loop
         std::vector<char> packet, ack;

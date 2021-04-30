@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
             for (char c : metadata)
                 data_stream << c;
             data_stream >> file_name;
-            file.open(file_name);
+            file.open(file_name, std::ios_base::out | std::ios_base::binary);
         }
 
         // buffer for receiving data packets
@@ -65,7 +65,9 @@ int main(int argc, char* argv[])
                 server.tcp_send(msg);
             }
         } 
-        while (!server.transfer_finished());        
+        while (!server.transfer_finished());
+
+        file.close();    
     }
     catch(const std::exception& e)
     {

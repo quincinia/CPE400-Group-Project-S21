@@ -105,9 +105,14 @@ public:
 
             // grab characters until failure or end of loop
             if (file.get(c))
+            {                
                 temp.push_back(c);
+            }
             else
+            {
+                std::cout << "Early break!, i = " << i << std::endl;
                 break;
+            }
         }
 
         std::cout << "Generated packet: ";
@@ -177,6 +182,12 @@ public:
         if (!error)
         {
             std::cout << "success!" << std::endl;
+
+            // std::cout << "Packet data: ";
+            // for (int i = 4; i < packet.size(); i++)
+            //     std::cout << packet[i];
+            // std::cout << std::endl;
+
             return true;
         }
         else

@@ -62,20 +62,34 @@ public:
     }
 
     // the receive functions may need different return types
-    void receive_metadata(/*std::fstream& file*/)
+    std::vector<char> receive_metadata(/*std::fstream& file*/)
     {
-        boost::asio::streambuf receive_buffer;
+        // boost::asio::streambuf receive_buffer;
+        std::vector<char> metadata(PACKET_SIZE);
         boost::system::error_code error;
-        boost::asio::read(tcp_socket, receive_buffer, boost::asio::transfer_all(), error);
+        
+        std::cout << "Receiving metadata..." << std::endl;
+
+        // std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(metadata), boost::asio::transfer_all(), error);
+
+        // std::size_t len = tcp_socket.receive(boost::asio::buffer(metadata));
+
+        std::size_t len = tcp_socket.read_some(boost::asio::buffer(metadata), error);
+
         if (error && error != boost::asio::error::eof)
         {
             std::cerr << "Receive failed: " << error.message() << std::endl;
         }
         else
         {
-            const char *data = boost::asio::buffer_cast<const char *>(receive_buffer.data());
-            std::cout << "Received: " << data << std::endl;
+            // const char *data = boost::asio::buffer_cast<const char *>(receive_buffer.data());
+            metadata.resize(len);
+            std::cout << "Received: ";
+            for (char c : metadata)
+                std::cout << c;
+            std::cout << std::endl;
         }
+        return metadata;
     }
 
     bool verify_sequence_num(std::vector<char>& packet)
@@ -108,13 +122,15 @@ public:
             return false;
         }
 
+        // std::cout << "received!" << std::endl;
+
         if (verify_sequence_num(buffer))
         {
             // if the packet is the last one, we should not accept any more
-            if (packet[0] == (char)0xFF &&
-                packet[1] == (char)0xFF &&
-                packet[2] == (char)0xFF &&
-                packet[3] == (char)0xFF)
+            if (buffer[0] == (char)0xFF &&
+                buffer[1] == (char)0xFF &&
+                buffer[2] == (char)0xFF &&
+                buffer[3] == (char)0xFF)
             {
                 final_packet_received = true;
             }
@@ -152,11 +168,11 @@ public:
         sequence_num_translator translator{sequence_num};
         if (final_packet_received)
         {
-            return std::string() + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + " Final packet was received!";
+            return std::string() + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + ((char)0xFF) + "\tFinal packet was received!";
         }
         else 
         {
-            return std::string() + translator.translate[0] + translator.translate[1] + translator.translate[2] + translator.translate[3] + " Expecting next packet to have sequence: " + std::to_string(sequence_num);
+            return std::string() + translator.translate[0] + translator.translate[1] + translator.translate[2] + translator.translate[3] + "\tExpecting next packet to have sequence: " + std::to_string(sequence_num);
         }
     }
     // synchronous send
@@ -180,9 +196,19 @@ public:
         }
     }
 
-    void write_file(std::fstream& file)
+    // requires an opened file
+    // vector must have the standard packet format (first 4 bytes reserved)
+    void write_file(std::ofstream& file, std::vector<char>& data)
     {
+        // add error checking code?
+        for (int i = 4; i < data.size(); i++)
+            file << data[i];
+    }
 
+    // so we know when to stop looping
+    bool transfer_finished()
+    {
+        return final_packet_received;
     }
 };
 

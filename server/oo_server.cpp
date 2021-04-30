@@ -8,6 +8,7 @@
 //
 
 #include "server.hpp"
+#include <sstream>
 
 int main(int argc, char* argv[])
 {
@@ -20,14 +21,51 @@ int main(int argc, char* argv[])
         server.tcp_accept();
 
         // receive metadata from client
-        server.receive_metadata();
+        std::vector<char> metadata;
+        metadata = server.receive_metadata();
+
+        // create file from metadata
+        std::stringstream data_stream;
+        std::ofstream file;
+        if (metadata.size() == 0)
+        {
+            std::cerr << "Metadata fail!" << std::endl;
+            return 1;
+        }
+        else
+        {
+            std::string file_name;
+            for (char c : metadata)
+                data_stream << c;
+            data_stream >> file_name;
+            file.open(file_name);
+        }
 
         // buffer for receiving data packets
         std::vector<char> packet;
 
-        // TEST: receive UDP message
-        server.receive_packet(packet);
-        
+        do
+        {
+            std::string msg;
+
+            // receive UDP message
+            if (server.receive_packet(packet))
+            {
+                // packet is good, send ACK for next one
+                msg = server.generate_ack();
+                server.tcp_send(msg);
+
+                // write data into file
+                server.write_file(file, packet);
+            }
+            else
+            {
+                // wrong packet was received, send ACK for prev one
+                msg = server.generate_ack();
+                server.tcp_send(msg);
+            }
+        } 
+        while (!server.transfer_finished());        
     }
     catch(const std::exception& e)
     {

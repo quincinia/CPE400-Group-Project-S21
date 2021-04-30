@@ -58,6 +58,9 @@ private:
     // to keep track of sequence numbers
     std::uint32_t sequence_num = 0;
 
+    // signals when we have nothing to send
+    bool final_packet_sent = false;
+
 public:
     Client() :
         tcp_socket(io_context),
@@ -86,7 +89,7 @@ public:
         if (file_size == -1) {
             throw std::runtime_error("File size error");
         }
-        return std::to_string(file_size) + " " + std::string(file_name);
+        return std::string(file_name) + " " + std::to_string(file_size);
     }
 
     // file must already be open when this is called
@@ -107,12 +110,16 @@ public:
                 break;
         }
 
+        std::cout << "Generated packet: ";
+
         // input sequence numbers
         sequence_num_translator translator{sequence_num++};
         if (file.eof())
         {
             // maxed out sequence number
             temp[0] = temp[1] = temp[2] = temp[3] = (char) 0xFF;
+            std::cout << "[final]" << std::endl;
+            final_packet_sent = true;
         }
         else 
         {
@@ -121,11 +128,14 @@ public:
             temp[1] = translator.translate[1];
             temp[2] = translator.translate[2];
             temp[3] = translator.translate[3];
+            std::cout << (sequence_num-1) << std::endl;
         }
 
         // in case the new data is smaller than the last packet, this will
         // remove the extra data that isn't part of the current packet
         buf = temp;
+        // normally we would put this inside an if-statement, however we
+        // are not expecting anything to go wrong with reading from the file
 
         std::cout << "Size of data packet: " << buf.size() << std::endl;
 
@@ -182,7 +192,10 @@ public:
         std::vector<char> buffer(PACKET_SIZE);
         boost::system::error_code error;
         std::cout << "Waiting for server message... ";
-        std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
+        // std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
+
+        std::size_t len = tcp_socket.read_some(boost::asio::buffer(buffer), error);
+
         if (error && error != boost::asio::error::eof)
         {
             std::cerr << "Receive failed: " << error.message() << std::endl;
@@ -193,6 +206,11 @@ public:
             std::cout << "received!" << std::endl;
             buffer.resize(len);
             msg = buffer;
+
+            std::cout << "Message: ";
+            for (char c : buffer)
+                std::cout << c;
+            std::cout << std::endl;
             return true;
         }
     }
@@ -200,6 +218,22 @@ public:
     void udp_read(std::vector<char> &msg)
     {
 
+    }
+
+    // check if the sequence number the receiver is expecting
+    // is the same one as the one we are preparing to send
+    // if we sent the last packet, then we don't care
+    // true if we are on track
+
+    // for GBN
+    bool confirm_ack(std::vector<char>& ack)
+    {
+        sequence_num_translator translator;
+        translator.translate[0] = ack[0];
+        translator.translate[1] = ack[1];
+        translator.translate[2] = ack[2];
+        translator.translate[3] = ack[3];
+        return (translator.sequence_num == sequence_num) || final_packet_sent;
     }
 };
     

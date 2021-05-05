@@ -16,3 +16,5 @@ The client takes 2 arguments:
 2. The name the file to send (the file **must be in the same directory** as the executable)
 
 For best results, keep the client and server executables in **separate directories**, and place the files to send in the same directory as that of the client executable.
+
+If you want to use the files in the `test` folder, then please copy those files into the `client` folder (or wherever you have placed the client executable).

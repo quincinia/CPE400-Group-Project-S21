@@ -9,6 +9,7 @@ This project was built and tested on Windows using g++, with the following argum
 
 ## Usage
 The server requires no arguments, and can be executed normally: `./oo_server`
+Note that the server program should be called **before** the client.
 
 The client takes 2 arguments:
 1. The IP address of the server (use `127.0.0.1` if the server is local, "localhost" doesn't work)

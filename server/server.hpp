@@ -40,6 +40,7 @@ private:
     bool final_packet_received = false;
 
 public:
+    // initialize ports
     Server() :
         tcp_socket(io_context),
         acceptor(io_context, tcp::endpoint(tcp::v4(), TCP_PORT)),
@@ -57,23 +58,18 @@ public:
 
     void udp_accept()
     {
-        // the UDP socket is already set up and we don't need
-        // to accept connections so this function is unneeded?
+        // we do not need to "accept" UDP connections, just read from the port
     }
 
     // the receive functions may need different return types
-    std::vector<char> receive_metadata(/*std::fstream& file*/)
+    std::vector<char> receive_metadata()
     {
-        // boost::asio::streambuf receive_buffer;
         std::vector<char> metadata(PACKET_SIZE);
         boost::system::error_code error;
         
         std::cout << "Receiving metadata..." << std::endl;
 
-        // std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(metadata), boost::asio::transfer_all(), error);
-
-        // std::size_t len = tcp_socket.receive(boost::asio::buffer(metadata));
-
+        // read functions will return the number of bytes read
         std::size_t len = tcp_socket.read_some(boost::asio::buffer(metadata), error);
 
         if (error && error != boost::asio::error::eof)
@@ -82,7 +78,6 @@ public:
         }
         else
         {
-            // const char *data = boost::asio::buffer_cast<const char *>(receive_buffer.data());
             metadata.resize(len);
             std::cout << "Received: ";
             for (char c : metadata)
@@ -114,7 +109,7 @@ public:
         boost::system::error_code error;
         std::cout << "Waiting for UDP data... ";
 
-        // read() returns the number of bytes read, aka the length of the vector/array
+        // read functions will return the number of bytes read
         std::size_t len = udp_socket.receive(boost::asio::buffer(buffer));
         if (error && error != boost::asio::error::eof)
         {
@@ -162,7 +157,7 @@ public:
 
     // creates an acknowledgement message based
     // off the current expected sequence number
-    // Packet format: <4-character sequence number> + <space> + <human-readable message (optional)>
+    // ACK format: <4-character sequence number> + <space> + <human-readable message (optional)>
     std::string generate_ack()
     {
         sequence_num_translator translator{sequence_num};
@@ -175,6 +170,7 @@ public:
             return std::string() + translator.translate[0] + translator.translate[1] + translator.translate[2] + translator.translate[3] + "\tExpecting next packet to have sequence: " + std::to_string(sequence_num);
         }
     }
+
     // synchronous send
     // messages will be generated outside of this function
     // see above for message format
@@ -200,7 +196,7 @@ public:
     // vector must have the standard packet format (first 4 bytes reserved)
     void write_file(std::ofstream& file, std::vector<char>& data)
     {
-        // add error checking code?
+        // assuming that the data is formatted correctly
         for (int i = 4; i < data.size(); i++)
             file << data[i];
     }

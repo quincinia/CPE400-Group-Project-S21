@@ -34,11 +34,7 @@ private:
     //udp::endpoint receiver_endpoint;
     //udp::endpoint sender_endpoint;
 
-    /**
-     * @brief Returns the file size for a
-     * @param file The file to check the size
-     * @param file_name Name of the file to check
-     */
+    // Returns the file size for an existing file
     long get_file_size(std::fstream &file, char *file_name)
     {
         using namespace std;
@@ -62,11 +58,12 @@ private:
     bool final_packet_sent = false;
 
 public:
+    // initialize sockets
     Client() :
         tcp_socket(io_context),
         udp_socket(io_context)
     {
-        // handle UDP stuff later
+        
     }
 
     void tcp_connect(char* address) 
@@ -93,7 +90,7 @@ public:
     }
 
     // file must already be open when this is called
-    // vector must be preallocated as well
+    // Packet format: <4-character sequence number> + <up to 1020 data characters>
     bool generate_packet(std::fstream& file, std::vector<char>& buf)
     {
         std::vector<char> temp(4);
@@ -144,7 +141,8 @@ public:
 
         std::cout << "Size of data packet: " << buf.size() << std::endl;
 
-        // this not be needed because the state of the file can be checked outside of this function
+        // this might not be needed because the state of the file can be 
+        // checked outside of this function
         return file.good();
     }
 
@@ -167,17 +165,17 @@ public:
         }
     }
 
-    // actually packets will be sent using TCP, so this might be obsolete
+    // packets will be sent using UDP, this function is obsolete
     void tcp_send(std::vector<char>& packet)
     {
 
     }
 
+    // packets must be formatted correctly before sending
     bool udp_send(std::vector<char>& packet)
     {
         std::cout << "Sending packet... ";
         boost::system::error_code error;
-        // boost::asio::write(udp_socket, boost::asio::buffer(packet), error);
         udp_socket.send(boost::asio::buffer(packet));
         if (!error)
         {
@@ -197,14 +195,13 @@ public:
         }
     }
 
-    // return types/parameters may change
     bool tcp_read(std::vector<char>& msg)
     {
         std::vector<char> buffer(PACKET_SIZE);
         boost::system::error_code error;
         std::cout << "Waiting for server message... ";
-        // std::size_t len = boost::asio::read(tcp_socket, boost::asio::buffer(buffer), boost::asio::transfer_all(), error);
 
+        // read functions will return the number of bytes read
         std::size_t len = tcp_socket.read_some(boost::asio::buffer(buffer), error);
 
         if (error && error != boost::asio::error::eof)
@@ -226,17 +223,16 @@ public:
         }
     }
 
+    // the server will only send its messages through the TCP channel
     void udp_read(std::vector<char> &msg)
     {
 
     }
 
-    // check if the sequence number the receiver is expecting
+    // Check if the sequence number the receiver is expecting
     // is the same one as the one we are preparing to send
-    // if we sent the last packet, then we don't care
-    // true if we are on track
-
-    // for GBN
+    // If we sent the last packet, then we don't care
+    // Returns true if we are on track
     bool confirm_ack(std::vector<char>& ack)
     {
         sequence_num_translator translator;

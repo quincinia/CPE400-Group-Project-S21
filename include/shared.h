@@ -14,6 +14,7 @@
 
 #define PACKET_SIZE 1024
 
+// converts a 4-byte number into four 1-byte characters, and vice versa
 union sequence_num_translator
 {
     std::uint32_t sequence_num;
